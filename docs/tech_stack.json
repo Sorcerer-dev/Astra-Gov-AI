@@ -1,0 +1,26 @@
+{
+    "frontend": {
+        "framework": "Next.js 14 (App Router)",
+        "styling": "Tailwind CSS",
+        "components": "Shadcn/UI",
+        "icons": "Lucide-React",
+        "animations": "Framer Motion",
+        "state_management": "React Context API",
+        "client_lib": "@supabase/supabase-js"
+    },
+    "backend": {
+        "server": "FastAPI",
+        "ai_orchestration": "LangGraph / LangChain",
+        "llm": "Gemini 1.5 Flash",
+        "embeddings": "text-embedding-004",
+        "vector_db": "ChromaDB (Local ClientServer mode)"
+    },
+    "database": {
+        "provider": "Supabase",
+        "features": [
+            "Auth",
+            "PostgreSQL",
+            "Realtime"
+        ]
+    }
+}
