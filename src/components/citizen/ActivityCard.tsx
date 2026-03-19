@@ -17,8 +17,19 @@ interface ActivityCardProps {
     tasks: ChecklistTask[];
 }
 
-export default function ActivityCard({ title, progress, type, status, tasks }: ActivityCardProps) {
+export default function ActivityCard({ title, progress: initialProgress, type, status, tasks: initialTasks }: ActivityCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [currentTasks, setCurrentTasks] = useState(initialTasks);
+
+    // Calculate progress based on completed tasks
+    const completedCount = currentTasks.filter(t => t.completed).length;
+    const calculatedProgress = Math.round((completedCount / currentTasks.length) * 100);
+
+    const toggleTask = (index: number) => {
+        const newTasks = [...currentTasks];
+        newTasks[index].completed = !newTasks[index].completed;
+        setCurrentTasks(newTasks);
+    };
 
     return (
         <div className="bg-card border rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden w-full max-w-md">
@@ -31,9 +42,9 @@ export default function ActivityCard({ title, progress, type, status, tasks }: A
                     </span>
                     <span className={cn(
                         "text-xs font-bold px-2 py-1 rounded-full",
-                        status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                        calculatedProgress === 100 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                     )}>
-                        {status}
+                        {calculatedProgress === 100 ? "completed" : status}
                     </span>
                 </div>
 
@@ -43,15 +54,15 @@ export default function ActivityCard({ title, progress, type, status, tasks }: A
                 <div className="space-y-2">
                     <div className="flex justify-between items-end">
                         <span className="text-sm font-medium text-muted-foreground">Completion</span>
-                        <span className="text-2xl font-bold tracking-tight text-primary">{progress}%</span>
+                        <span className="text-2xl font-bold tracking-tight text-primary">{calculatedProgress}%</span>
                     </div>
                     <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
                         <div
                             className={cn(
                                 "h-full transition-all duration-500 ease-out",
-                                progress === 100 ? "bg-green-500" : "bg-primary"
+                                calculatedProgress === 100 ? "bg-green-500" : "bg-primary"
                             )}
-                            style={{ width: `${progress}%` }}
+                            style={{ width: `${calculatedProgress}%` }}
                         />
                     </div>
                 </div>
@@ -63,23 +74,27 @@ export default function ActivityCard({ title, progress, type, status, tasks }: A
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary rounded-lg transition-colors min-h-[44px]"
                 >
-                    <span>View Tasks ({tasks.filter(t => t.completed).length}/{tasks.length})</span>
+                    <span>View Tasks ({completedCount}/{currentTasks.length})</span>
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
 
                 {isExpanded && (
-                    <div className="px-3 py-2 mt-2 space-y-3 max-h-48 overflow-y-auto no-scrollbar border-t pt-4">
-                        {tasks.map((task, index) => (
-                            <div key={index} className="flex items-start space-x-3 group cursor-pointer">
-                                <button className="mt-0.5 focus:outline-none flex-shrink-0">
+                    <div className="px-3 py-2 mt-2 space-y-3 max-h-64 overflow-y-auto no-scrollbar border-t pt-4">
+                        {currentTasks.map((task, index) => (
+                            <div 
+                                key={index} 
+                                onClick={() => toggleTask(index)}
+                                className="flex items-start space-x-3 group cursor-pointer hover:bg-secondary/30 p-1.5 rounded-lg transition-colors"
+                            >
+                                <div className="mt-0.5 flex-shrink-0">
                                     {task.completed ? (
                                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                                     ) : (
                                         <Circle className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                     )}
-                                </button>
+                                </div>
                                 <span className={cn(
-                                    "text-sm",
+                                    "text-sm transition-all",
                                     task.completed ? "text-muted-foreground line-through" : "text-foreground font-medium"
                                 )}>
                                     {task.name}
