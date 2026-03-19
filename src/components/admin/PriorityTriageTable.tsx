@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase, Complaint } from "@/lib/supabase";
 import { AlertTriangle, Clock, MoreVertical, ShieldCheck, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function PriorityTriageTable() {
     const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -35,22 +36,28 @@ export default function PriorityTriageTable() {
     }, []);
 
     const handleVerifyRow = async (id: string, currentCount: number) => {
+        console.log("Admin: Attempting to verify complaint ID:", id, "current count:", currentCount);
         setUpdatingId(id);
         try {
             const { error } = await supabase
                 .from("complaints")
-                .update({ verification_count: currentCount + 1 })
+                .update({ verification_count: (currentCount || 0) + 1 })
                 .eq("id", id);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase error verifying:", error);
+                throw error;
+            }
 
-            // Success: reload or update local state
+            console.log("Admin: Verification successful for ID:", id);
+
+            // Success: update local state
             setComplaints(prev => prev.map(c => 
-                c.id === id ? { ...c, verification_count: c.verification_count + 1 } : c
+                c.id === id ? { ...c, verification_count: (c.verification_count || 0) + 1 } : c
             ));
-        } catch (err) {
-            console.error("Error verifying in admin:", err);
-            alert("Failed to verify. Please try again.");
+        } catch (err: any) {
+            console.error("Caught error in admin verify:", err);
+            alert(`Failed to verify: ${err.message || 'Unknown error'}. Check console for details.`);
         } finally {
             setUpdatingId(null);
         }
@@ -90,6 +97,7 @@ export default function PriorityTriageTable() {
                                 <th className="px-6 py-4 font-semibold">Department</th>
                                 <th className="px-6 py-4 font-semibold">Priority</th>
                                 <th className="px-6 py-4 font-semibold">Verifications</th>
+                                <th className="px-6 py-4 font-semibold">SLA / Deadline</th>
                                 <th className="px-6 py-4 font-semibold">Status</th>
                                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
@@ -115,6 +123,21 @@ export default function PriorityTriageTable() {
                                             <ShieldCheck className="w-4 h-4 text-amber-500" />
                                             <span>{comp.verification_count} verified</span>
                                         </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {comp.deadline ? (() => {
+                                            const daysLeft = Math.ceil((new Date(comp.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                            const isOverdue = daysLeft < 0;
+                                            return (
+                                                <div className={cn(
+                                                    "flex items-center space-x-1.5 font-bold",
+                                                    isOverdue ? "text-red-600 animate-pulse" : daysLeft <= 1 ? "text-amber-600" : "text-blue-600"
+                                                )}>
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    <span>{isOverdue ? "OVERDUE (Escalated)" : `${daysLeft}d left`}</span>
+                                                </div>
+                                            );
+                                        })() : <span className="text-muted-foreground italic text-xs">No SLA set</span>}
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-md text-xs font-semibold ${comp.status === "Resolved" ? "bg-green-100 text-green-700" :

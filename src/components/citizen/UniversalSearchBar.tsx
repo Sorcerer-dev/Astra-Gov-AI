@@ -1,27 +1,58 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, CheckCircle2, XCircle, Info, ChevronRight, AlertCircle, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import ThinkingOverlay from "@/components/shared/ThinkingOverlay";
+import { mockSchemes, mockComplaints } from "@/lib/mock_data";
+import { cn } from "@/lib/utils";
 
 export default function UniversalSearchBar() {
     const [query, setQuery] = useState("");
     const [isThinking, setIsThinking] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+    const [results, setResults] = useState<any[]>([]);
+    const [selectedScheme, setSelectedScheme] = useState<any | null>(null);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!query.trim()) return;
+        const trimmedQuery = query.trim().toLowerCase();
+        if (!trimmedQuery) {
+            setResults([]);
+            return;
+        }
+
         setIsThinking(true);
-        // Simulate API call
+        setHasSearched(true);
+        setResults([]); // Clear previous results
+
+        // Simulate AI search processing
         setTimeout(() => {
+            const filteredSchemes = mockSchemes.filter(s => 
+                s.title.toLowerCase().includes(trimmedQuery) || 
+                s.description.toLowerCase().includes(trimmedQuery)
+            ).map(s => ({ ...s, type: 'scheme' }));
+
+            const filteredComplaints = mockComplaints.filter(c => 
+                c.description.toLowerCase().includes(trimmedQuery) || 
+                c.department.toLowerCase().includes(trimmedQuery)
+            ).map(c => ({ 
+                id: c.id, 
+                title: `Report: ${c.description}`, 
+                description: `Department: ${c.department} | Status: ${c.status}`,
+                type: 'complaint',
+                original: c 
+            }));
+
+            setResults([...filteredSchemes, ...filteredComplaints]);
             setIsThinking(false);
-        }, 4500);
+        }, 3000);
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto mt-6 md:mt-12 mb-8 px-4 w-full">
+        <div className="w-full max-w-3xl mx-auto mt-6 md:mt-12 mb-8 px-4 w-full relative">
             <ThinkingOverlay isVisible={isThinking} />
-            <form onSubmit={handleSearch} className="relative group w-full">
+            
+            <form onSubmit={handleSearch} className="relative group w-full z-10">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Search className="h-6 w-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 </div>
@@ -39,6 +70,145 @@ export default function UniversalSearchBar() {
                     Search
                 </button>
             </form>
+
+            {/* Search Results */}
+            {hasSearched && !isThinking && results.length === 0 && (
+                <div className="mt-8 p-8 bg-muted/20 border border-dashed rounded-3xl text-center fade-in animate-in">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary mb-4">
+                        <Search className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <h4 className="text-lg font-bold">No results found</h4>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-1">
+                        We couldn't find any schemes or issues matching &ldquo;{query}&rdquo;. Try a broader keyword like &ldquo;Business&rdquo; or &ldquo;Salem&rdquo;.
+                    </p>
+                </div>
+            )}
+
+            {results.length > 0 && !isThinking && (
+                <div className="mt-8 space-y-4 fade-in animate-in slide-in-from-top-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground px-4">Search Results</h3>
+                    <div className="grid gap-3">
+                        {results.map((result) => (
+                            <div 
+                                key={result.id}
+                                onClick={() => {
+                                    if (result.type === 'scheme') {
+                                        setSelectedScheme(result);
+                                    } else {
+                                        // Optional: toast or message for complaints
+                                        alert("This is a public report. You can view more details in the 'Complaint Portal' tab.");
+                                    }
+                                }}
+                                className="bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group"
+                            >
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="flex gap-3">
+                                        <div className="mt-1 shrink-0">
+                                            {result.type === 'scheme' ? (
+                                                <Info className="w-5 h-5 text-primary" />
+                                            ) : (
+                                                <MessageSquare className="w-5 h-5 text-amber-500" />
+                                            )}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{result.title}</h4>
+                                            <p className="text-sm text-muted-foreground line-clamp-1">{result.description}</p>
+                                        </div>
+                                    </div>
+                                    {result.type === 'scheme' && result.eligibility && (
+                                        <div className={cn(
+                                            "shrink-0 px-2 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1",
+                                            result.eligibility.is_eligible 
+                                                ? "bg-green-100 text-green-700 border-green-200" 
+                                                : "bg-red-100 text-red-700 border-red-200"
+                                        )}>
+                                            {result.eligibility.is_eligible ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                            {result.eligibility.is_eligible ? "Eligible" : "Not Eligible"}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Scheme Eligibility Modal/Detail */}
+            {selectedScheme && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md fade-in animate-in">
+                    <div className="bg-card border rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden zoom-in animate-in duration-300">
+                        <div className="p-6 border-b bg-muted/20 flex justify-between items-start">
+                            <div>
+                                <div className={cn(
+                                    "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold mb-2",
+                                    selectedScheme.eligibility.is_eligible ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                )}>
+                                    {selectedScheme.eligibility.is_eligible ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                    {selectedScheme.eligibility.is_eligible ? "ELIGIBLE" : "NOT ELIGIBLE"}
+                                </div>
+                                <h3 className="text-xl font-extrabold leading-tight">{selectedScheme.title}</h3>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedScheme(null)}
+                                className="p-2 hover:bg-secondary rounded-full transition-colors"
+                            >
+                                <AlertCircle className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                            <div className="space-y-2">
+                                <h5 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">About Scheme</h5>
+                                <p className="text-sm leading-relaxed">{selectedScheme.description}</p>
+                            </div>
+
+                            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10">
+                                <div className="flex items-center gap-2 mb-2 text-primary">
+                                    <Info className="w-4 h-4" />
+                                    <h5 className="text-sm font-bold">AI Eligibility Analysis</h5>
+                                </div>
+                                <p className="text-sm text-foreground/80 italic leading-relaxed">
+                                    &ldquo;{selectedScheme.eligibility.reasoning}&rdquo;
+                                </p>
+                            </div>
+
+                            {selectedScheme.eligibility?.checklist?.length > 0 && (
+                                <div className="space-y-3">
+                                    <h5 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Document Requirements</h5>
+                                    <div className="space-y-2">
+                                        {selectedScheme.eligibility.checklist.map((item: { item: string, status: string }, idx: number) => (
+                                            <div key={idx} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl">
+                                                <span className="text-sm font-medium">{item.item}</span>
+                                                <span className={cn(
+                                                    "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                                                    item.status === "verified" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"
+                                                )}>
+                                                    {item.status.toUpperCase()}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 bg-muted/10 border-t flex gap-3">
+                            <button 
+                                onClick={() => setSelectedScheme(null)}
+                                className="flex-1 px-4 py-3 bg-secondary text-secondary-foreground font-bold rounded-2xl hover:bg-secondary/80 transition-colors"
+                            >
+                                Close
+                            </button>
+                            {selectedScheme.eligibility.is_eligible && (
+                                <button className="flex-1 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-2xl hover:bg-primary/90 transition-primary flex items-center justify-center gap-2">
+                                    <span>Apply Now</span>
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

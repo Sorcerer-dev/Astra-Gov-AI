@@ -125,6 +125,7 @@ export default function ComplaintFeed() {
                                         location={complaint.location}
                                         distance={complaint.distance || "Nearby"}
                                         isLocal={isLocalMatch}
+                                        deadline={complaint.deadline}
                                     />
                                 </div>
                             );

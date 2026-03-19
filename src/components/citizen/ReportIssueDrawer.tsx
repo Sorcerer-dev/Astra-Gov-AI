@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, MapPin, Camera, UploadCloud, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
+import { X, MapPin, Camera, UploadCloud, ChevronRight, CheckCircle2, Loader2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -57,6 +57,7 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
     const [isEditingLocation, setIsEditingLocation] = useState(false);
 
     const detectedDeptAssigned = detectDeptAssigned(description);
+    const isSuccess = step === 4;
 
     const handleSubmit = async () => {
         if (!description.trim()) {
@@ -81,10 +82,8 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
                 throw insertError;
             }
 
-            // Success - reset and close
-            setDescription("");
-            setStep(1);
-            onClose();
+            // Success - Move to success step
+            setStep(4);
             onSubmitSuccess?.();
         } catch (err: any) {
             setError(err.message || "Failed to submit complaint. Please try again.");
@@ -132,12 +131,13 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
 
                     {/* Steps Indicator */}
                     <div className="flex items-center space-x-2 text-sm font-medium text-muted-foreground mb-8">
-                        <div className={cn("px-2.5 py-1 rounded-full", step >= 1 ? "bg-primary text-primary-foreground" : "bg-secondary")}>1</div>
+                        <div className={cn("px-2.5 py-1 rounded-full", step >= 1 && step < 4 ? "bg-primary text-primary-foreground" : step === 4 ? "bg-green-600 text-white" : "bg-secondary")}>1</div>
                         <div className={cn("h-1 w-8 rounded-full", step >= 2 ? "bg-primary" : "bg-secondary")} />
-                        <div className={cn("px-2.5 py-1 rounded-full", step >= 2 ? "bg-primary text-primary-foreground" : "bg-secondary")}>2</div>
+                        <div className={cn("px-2.5 py-1 rounded-full", step >= 2 && step < 4 ? "bg-primary text-primary-foreground" : step === 4 ? "bg-green-600 text-white" : "bg-secondary")}>2</div>
                         <div className={cn("h-1 w-8 rounded-full", step >= 3 ? "bg-primary" : "bg-secondary")} />
-                        <div className={cn("px-2.5 py-1 rounded-full", step >= 3 ? "bg-primary text-primary-foreground" : "bg-secondary")}>3</div>
+                        <div className={cn("px-2.5 py-1 rounded-full", (step === 3) ? "bg-primary text-primary-foreground" : step === 4 ? "bg-green-600 text-white" : "bg-secondary")}>3</div>
                     </div>
+
 
                     {/* STEP 1: Description */}
                     {step === 1 && (
@@ -246,28 +246,62 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
                         </div>
                     )}
 
+                    {/* STEP 4: Success / SLA Confirmation */}
+                    {step === 4 && (
+                        <div className="flex flex-col items-center justify-center text-center space-y-6 pt-10 fade-in animate-in zoom-in group">
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
+                                <CheckCircle2 className="w-12 h-12" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-extrabold">Report Submitted!</h3>
+                                <p className="text-muted-foreground mt-2 font-medium">Your issue is now live in the portal.</p>
+                            </div>
+                            
+                            <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 w-full space-y-4">
+                                <div className="flex items-center justify-center gap-2 text-blue-700">
+                                    <Clock className="w-5 h-5" />
+                                    <h4 className="font-bold">SLA Confirmation</h4>
+                                </div>
+                                <p className="text-sm text-blue-900/70">
+                                    Your issue has been routed to **{detectedDeptAssigned}**. 
+                                    Resolution expected within:
+                                </p>
+                                <div className="text-3xl font-black text-blue-700">5 DAYS</div>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
                 {/* Footer Actions */}
                 <div className="p-6 border-t bg-muted/20">
-                    <button
-                        disabled={isSubmitting}
-                        onClick={() => {
-                            if (step < 3) setStep(step + 1);
-                            else {
-                                handleSubmit();
-                            }
-                        }}
-                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow hover:bg-primary/90 transition-colors flex justify-center items-center group disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isSubmitting ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</>
-                        ) : step < 3 ? (
-                            <>Next Step <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" /></>
-                        ) : (
-                            "Submit Report"
-                        )}
-                    </button>
+                    {step === 4 ? (
+                        <button
+                            onClick={handleClose}
+                            className="w-full py-4 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all flex justify-center items-center"
+                        >
+                            Done
+                        </button>
+                    ) : (
+                        <button
+                            disabled={isSubmitting}
+                            onClick={() => {
+                                if (step < 3) setStep(step + 1);
+                                else {
+                                    handleSubmit();
+                                }
+                            }}
+                            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow hover:bg-primary/90 transition-colors flex justify-center items-center group disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</>
+                            ) : step < 3 ? (
+                                <>Next Step <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" /></>
+                            ) : (
+                                "Submit Report"
+                            )}
+                        </button>
+                    )}
                 </div>
 
             </div>

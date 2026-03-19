@@ -16,6 +16,7 @@ interface ComplaintCardProps {
     location: string;
     distance: string;
     isLocal: boolean;
+    deadline?: string;
 }
 
 export default function ComplaintCard({
@@ -27,7 +28,8 @@ export default function ComplaintCard({
     verification_count,
     location,
     distance,
-    isLocal
+    isLocal,
+    deadline
 }: ComplaintCardProps) {
     const [localCount, setLocalCount] = useState(verification_count);
     const [isValidating, setIsValidating] = useState(false);
@@ -36,22 +38,28 @@ export default function ComplaintCard({
     const handleValidate = async () => {
         if (isValidating || hasValidated) return;
 
+        console.log("Citizen: Validating complaint ID:", id, "current count:", localCount);
         setIsValidating(true);
         try {
             // Increment in Supabase
             const { error } = await supabase
                 .from("complaints")
-                .update({ verification_count: localCount + 1 })
+                .update({ verification_count: (localCount || 0) + 1 })
                 .eq("id", id);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase error validating:", error);
+                throw error;
+            }
+
+            console.log("Citizen: Validation successful for ID:", id);
 
             // Update local state
-            setLocalCount(prev => prev + 1);
+            setLocalCount(prev => (prev || 0) + 1);
             setHasValidated(true);
-        } catch (err) {
-            console.error("Error validating complaint:", err);
-            alert("Failed to validate. Please try again.");
+        } catch (err: any) {
+            console.error("Caught error in validation:", err);
+            alert(`Failed to validate: ${err.message || 'Unknown error'}. Check console for details.`);
         } finally {
             setIsValidating(false);
         }
@@ -97,6 +105,38 @@ export default function ComplaintCard({
                         P-{priority_score.toFixed(1)}
                     </div>
                 </div>
+
+                {/* SLA Countdown / Escalation */}
+                <div className="mb-4">
+                    {deadline ? (() => {
+                        const daysLeft = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                        const isOverdue = daysLeft < 0;
+
+                        return (
+                            <div className={cn(
+                                "flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold border",
+                                isOverdue 
+                                    ? "bg-red-50 text-red-700 border-red-200 animate-pulse" 
+                                    : daysLeft <= 1 
+                                        ? "bg-amber-50 text-amber-700 border-amber-200" 
+                                        : "bg-blue-50 text-blue-700 border-blue-100"
+                            )}>
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>
+                                    {isOverdue 
+                                        ? "ESCALATED TO HIGHER AUTHORITY" 
+                                        : `TIME TO RESOLVE: ${daysLeft} DAYS LEFT`}
+                                </span>
+                            </div>
+                        );
+                    })() : (
+                        <div className="flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold border bg-secondary/30 text-muted-foreground border-transparent italic">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>SLA: Processing...</span>
+                        </div>
+                    )}
+                </div>
+
 
                 {/* Content */}
                 <h3 className="font-semibold text-lg leading-snug mb-2 text-foreground">{description}</h3>

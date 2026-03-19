@@ -16,4 +16,5 @@ export interface Complaint {
     location: string;
     distance?: string;
     created_at: string;
+    deadline?: string;
 }
