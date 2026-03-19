@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { mockComplaints, mockUserLocation } from "@/lib/mock_data";
+import { useState, useEffect, useCallback } from "react";
+import { mockUserLocation } from "@/lib/mock_data";
+import { supabase, Complaint } from "@/lib/supabase";
 import ComplaintCard from "@/components/citizen/ComplaintCard";
 import ReportIssueDrawer from "@/components/citizen/ReportIssueDrawer";
-import { MapPin, Filter } from "lucide-react";
+import { MapPin, Filter, Loader2 } from "lucide-react";
 
 export default function ComplaintFeed() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState<string>(mockUserLocation);
+    const [complaints, setComplaints] = useState<Complaint[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const locations = [
         mockUserLocation, // "Salem, Ward 4"
@@ -17,8 +20,36 @@ export default function ComplaintFeed() {
         "Madurai, South"
     ];
 
+    const fetchComplaints = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("complaints")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                console.error("Error fetching complaints:", error);
+            } else {
+                setComplaints(data || []);
+            }
+        } catch (err) {
+            console.error("Unexpected error fetching complaints:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchComplaints();
+    }, [fetchComplaints]);
+
     const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedLocation(e.target.value);
+    };
+
+    const handleSubmitSuccess = () => {
+        fetchComplaints(); // Re-fetch complaints after a new one is submitted
     };
 
     return (
@@ -62,27 +93,37 @@ export default function ComplaintFeed() {
 
             {/* Grid Layout for Complaints */}
             <div className="flex-1 overflow-y-auto pr-4 -mr-4">
-                {mockComplaints.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center p-12 mt-12 text-center fade-in animate-in">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+                        <p className="text-muted-foreground font-medium">Loading complaints...</p>
+                    </div>
+                ) : complaints.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 mt-12 text-center fade-in animate-in">
                         <div className="w-16 h-16 bg-secondary rounded-full flex justify-center items-center text-muted-foreground mb-4">
                             <MapPin className="w-8 h-8" />
                         </div>
                         <h3 className="text-xl font-bold">No issues found</h3>
-                        <p className="text-muted-foreground mt-2">There are currently no reported issues in {selectedLocation}.</p>
+                        <p className="text-muted-foreground mt-2">There are currently no reported issues. Be the first to report one!</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max pb-8">
-                        {mockComplaints.map((complaint) => {
-                            // Logic check: Does the user's mock location match the feed's selected location?
-                            // AND Does the complaint's location fall within that feed location?
-                            // For Phase 1 demo, we enable validation only if the selected feed location
-                            // is equal to the HARDCODED User location AND the complaint belongs to that location.
-                            const isLocalMatch = (selectedLocation === mockUserLocation) && (complaint.location === mockUserLocation);
+                        {complaints.map((complaint) => {
+                            const isLocalMatch = selectedLocation.toLowerCase().includes(complaint.location.toLowerCase()) || 
+                                               complaint.location.toLowerCase().includes(selectedLocation.toLowerCase());
 
                             return (
                                 <div key={complaint.id} className="fade-in animate-in slide-in-from-bottom-4 duration-500">
                                     <ComplaintCard
-                                        {...complaint}
+                                        id={complaint.id}
+                                        description={complaint.description}
+                                        dept_assigned={complaint.dept_assigned}
+                                        priority_score={complaint.priority_score}
+                                        status={complaint.status}
+                                        verification_count={complaint.verification_count}
+                                        timestamp={complaint.created_at}
+                                        location={complaint.location}
+                                        distance={complaint.distance || "Nearby"}
                                         isLocal={isLocalMatch}
                                     />
                                 </div>
@@ -96,7 +137,8 @@ export default function ComplaintFeed() {
             <ReportIssueDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
-                mockLocation={mockUserLocation} // Pass the hardcoded user location so they can only report from "where they are"
+                mockLocation={mockUserLocation}
+                onSubmitSuccess={handleSubmitSuccess}
             />
         </div>
     );

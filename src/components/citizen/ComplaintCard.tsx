@@ -1,12 +1,14 @@
 "use client";
 
-import { MapPin, ShieldCheck, Eye, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { MapPin, ShieldCheck, Eye, Clock, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface ComplaintCardProps {
     id: string;
     description: string;
-    department: string;
+    dept_assigned: string;
     priority_score: number;
     status: string;
     verification_count: number;
@@ -17,8 +19,9 @@ interface ComplaintCardProps {
 }
 
 export default function ComplaintCard({
+    id,
     description,
-    department,
+    dept_assigned,
     priority_score,
     status,
     verification_count,
@@ -26,6 +29,33 @@ export default function ComplaintCard({
     distance,
     isLocal
 }: ComplaintCardProps) {
+    const [localCount, setLocalCount] = useState(verification_count);
+    const [isValidating, setIsValidating] = useState(false);
+    const [hasValidated, setHasValidated] = useState(false);
+
+    const handleValidate = async () => {
+        if (isValidating || hasValidated) return;
+
+        setIsValidating(true);
+        try {
+            // Increment in Supabase
+            const { error } = await supabase
+                .from("complaints")
+                .update({ verification_count: localCount + 1 })
+                .eq("id", id);
+
+            if (error) throw error;
+
+            // Update local state
+            setLocalCount(prev => prev + 1);
+            setHasValidated(true);
+        } catch (err) {
+            console.error("Error validating complaint:", err);
+            alert("Failed to validate. Please try again.");
+        } finally {
+            setIsValidating(false);
+        }
+    };
 
     const getStatusIcon = () => {
         switch (status) {
@@ -70,7 +100,7 @@ export default function ComplaintCard({
 
                 {/* Content */}
                 <h3 className="font-semibold text-lg leading-snug mb-2 text-foreground">{description}</h3>
-                <p className="text-sm font-medium text-muted-foreground mb-6">Routed to: <span className="text-foreground">{department}</span></p>
+                <p className="text-sm font-medium text-muted-foreground mb-6">Routed to: <span className="text-foreground">{dept_assigned}</span></p>
 
                 {/* Status Stepper */}
                 <div className="relative mt-auto pt-4 border-t">
@@ -112,13 +142,26 @@ export default function ComplaintCard({
             <div className="bg-muted/10 border-t p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-1.5 text-sm font-medium">
                     <ShieldCheck className="w-4 h-4 text-green-600" />
-                    <span>{verification_count} Verified</span>
+                    <span>{localCount} Verified</span>
                 </div>
 
                 {isLocal ? (
-                    <button className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-semibold rounded-lg transition-colors flex items-center space-x-1">
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Validate</span>
+                    <button
+                        onClick={handleValidate}
+                        disabled={isValidating || hasValidated}
+                        className={cn(
+                            "px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center space-x-1",
+                            hasValidated 
+                                ? "bg-green-100 text-green-700 cursor-default" 
+                                : "bg-primary/10 hover:bg-primary/20 text-primary"
+                        )}
+                    >
+                        {isValidating ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <ShieldCheck className="w-4 h-4" />
+                        )}
+                        <span>{hasValidated ? "Validated" : "Validate"}</span>
                     </button>
                 ) : (
                     <button disabled className="px-4 py-2 bg-secondary/50 text-muted-foreground text-sm font-medium rounded-lg cursor-not-allowed">

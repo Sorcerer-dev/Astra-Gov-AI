@@ -1,17 +1,107 @@
 "use client";
 
 import { useState } from "react";
-import { X, MapPin, Camera, UploadCloud, ChevronRight, CheckCircle2 } from "lucide-react";
+import { X, MapPin, Camera, UploadCloud, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 interface ReportIssueDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     mockLocation: string;
+    onSubmitSuccess?: () => void;
 }
 
-export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: ReportIssueDrawerProps) {
+// Simple AI category detection (maps keywords to departments)
+function detectDeptAssigned(description: string): string {
+    const lower = description.toLowerCase();
+    if (lower.includes("garbage") || lower.includes("waste") || lower.includes("sanitation") || lower.includes("trash") || lower.includes("dump")) {
+        return "Municipal Sanitation";
+    }
+    if (lower.includes("pothole") || lower.includes("road") || lower.includes("bridge") || lower.includes("footpath") || lower.includes("pavement")) {
+        return "Public Works Department";
+    }
+    if (lower.includes("electric") || lower.includes("transformer") || lower.includes("power") || lower.includes("light") || lower.includes("wire")) {
+        return "Electricity Board";
+    }
+    if (lower.includes("water") || lower.includes("pipe") || lower.includes("leak") || lower.includes("drain") || lower.includes("sewage")) {
+        return "Water Supply Department";
+    }
+    if (lower.includes("tree") || lower.includes("park") || lower.includes("garden") || lower.includes("green")) {
+        return "Parks & Recreation";
+    }
+    return "General Administration";
+}
+
+function detectPriority(description: string): number {
+    const lower = description.toLowerCase();
+    const urgentKeywords = ["danger", "emergency", "fire", "collapse", "sparking", "electrocution", "flood", "accident"];
+    const highKeywords = ["broken", "overflow", "leaking", "blocked", "unsafe", "large"];
+    let score = 5.0;
+    for (const kw of urgentKeywords) {
+        if (lower.includes(kw)) { score = Math.min(score + 2.5, 10); }
+    }
+    for (const kw of highKeywords) {
+        if (lower.includes(kw)) { score = Math.min(score + 1.0, 10); }
+    }
+    return parseFloat(score.toFixed(1));
+}
+
+export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSubmitSuccess }: ReportIssueDrawerProps) {
     const [step, setStep] = useState(1);
+    const [description, setDescription] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<string | null>(null);
+    const [location, setLocation] = useState(mockLocation);
+    const [isEditingLocation, setIsEditingLocation] = useState(false);
+
+    const detectedDeptAssigned = detectDeptAssigned(description);
+
+    const handleSubmit = async () => {
+        if (!description.trim()) {
+            setError("Please describe the issue before submitting.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const { error: insertError } = await supabase.from("complaints").insert({
+                description: description.trim(),
+                dept_assigned: detectedDeptAssigned,
+                priority_score: detectPriority(description),
+                status: "Pending",
+                verification_count: 0,
+                location: location,
+            });
+
+            if (insertError) {
+                throw insertError;
+            }
+
+            // Success - reset and close
+            setDescription("");
+            setStep(1);
+            onClose();
+            onSubmitSuccess?.();
+        } catch (err: any) {
+            setError(err.message || "Failed to submit complaint. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleClose = () => {
+        setStep(1);
+        setDescription("");
+        setError(null);
+        setSelectedFile(null);
+        setLocation(mockLocation);
+        setIsEditingLocation(false);
+        onClose();
+    };
 
     if (!isOpen) return null;
 
@@ -20,7 +110,7 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: Rep
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 transition-opacity"
-                onClick={onClose}
+                onClick={handleClose}
             />
 
             {/* Drawer */}
@@ -30,7 +120,7 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: Rep
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                     <h2 className="text-xl font-bold tracking-tight">Report an Issue</h2>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="p-2 hover:bg-secondary rounded-full transition-colors"
                     >
                         <X className="w-5 h-5" />
@@ -59,14 +149,17 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: Rep
                             <textarea
                                 className="w-full h-32 p-3 bg-secondary/50 border rounded-xl focus:ring-2 focus:ring-primary outline-none resize-none"
                                 placeholder="E.g., The street light pole near the bakery is leaning dangerously after the storm..."
-                                defaultValue="There is a large uncollected pile of garbage overflowing onto the sidewalk near the municipal park entrance."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
                             />
-                            <div className="bg-primary/10 border-l-4 border-primary p-4 rounded-r-lg">
-                                <p className="text-sm font-medium text-primary flex items-center">
-                                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                                    AI detected Category: <span className="font-bold ml-1">Sanitation</span>
-                                </p>
-                            </div>
+                            {description.trim() && (
+                                <div className="bg-primary/10 border-l-4 border-primary p-4 rounded-r-lg">
+                                    <p className="text-sm font-medium text-primary flex items-center">
+                                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                                        AI detected Category: <span className="font-bold ml-1">{detectedDeptAssigned}</span>
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -87,11 +180,25 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: Rep
                                     </svg>
                                 </div>
                                 <div className="p-4 bg-card flex justify-between items-center">
-                                    <div>
+                                    <div className="flex-1 mr-4">
                                         <p className="font-semibold text-sm">Detected GPS Pin</p>
-                                        <p className="text-xs text-muted-foreground">{mockLocation} (Accurate to 5m)</p>
+                                        {isEditingLocation ? (
+                                            <input
+                                                className="w-full text-xs bg-secondary/50 border rounded px-2 py-1 focus:ring-1 focus:ring-primary outline-none mt-1"
+                                                value={location}
+                                                onChange={(e) => setLocation(e.target.value)}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">{location} (Accurate to 5m)</p>
+                                        )}
                                     </div>
-                                    <button className="text-primary text-sm font-medium hover:underline">Edit</button>
+                                    <button
+                                        onClick={() => setIsEditingLocation(!isEditingLocation)}
+                                        className="text-primary text-sm font-medium hover:underline shrink-0"
+                                    >
+                                        {isEditingLocation ? "Save" : "Edit"}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -105,16 +212,37 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: Rep
                                 <p className="text-sm text-muted-foreground">Upload a photo. Our vision AI (Phase 4) will automatically verify validity.</p>
                             </div>
 
-                            <button className="w-full h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-muted-foreground hover:bg-secondary/50 hover:text-foreground hover:border-primary transition-colors group">
+                            <input
+                                type="file"
+                                id="photo-upload"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    setSelectedFile(file ? file.name : null);
+                                }}
+                            />
+                            <label
+                                htmlFor="photo-upload"
+                                className="w-full h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-muted-foreground hover:bg-secondary/50 hover:text-foreground hover:border-primary transition-colors group cursor-pointer"
+                            >
                                 <UploadCloud className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" />
-                                <span className="text-sm font-medium">Tap to upload photo</span>
-                            </button>
+                                <span className="text-sm font-medium">
+                                    {selectedFile ? selectedFile : "Tap to upload photo"}
+                                </span>
+                            </label>
 
                             <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-r-lg mt-4">
                                 <p className="text-xs font-medium text-amber-700">
                                     Note: False reporting negatively impacts your digital civic score. Evidence is required for High-Priority routing.
                                 </p>
                             </div>
+
+                            {error && (
+                                <div className="bg-red-500/10 border-l-4 border-red-500 p-4 rounded-r-lg">
+                                    <p className="text-xs font-medium text-red-700">{error}</p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -123,17 +251,18 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation }: Rep
                 {/* Footer Actions */}
                 <div className="p-6 border-t bg-muted/20">
                     <button
+                        disabled={isSubmitting}
                         onClick={() => {
                             if (step < 3) setStep(step + 1);
                             else {
-                                // Submit logic
-                                onClose();
-                                setStep(1);
+                                handleSubmit();
                             }
                         }}
-                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow hover:bg-primary/90 transition-colors flex justify-center items-center group"
+                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow hover:bg-primary/90 transition-colors flex justify-center items-center group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {step < 3 ? (
+                        {isSubmitting ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</>
+                        ) : step < 3 ? (
                             <>Next Step <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" /></>
                         ) : (
                             "Submit Report"
