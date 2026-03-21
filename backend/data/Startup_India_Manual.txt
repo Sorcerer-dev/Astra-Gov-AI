@@ -1,0 +1,21 @@
+Startup India Seed Fund Scheme (SISFS)
+
+1. Introduction
+The Startup India Seed Fund Scheme aims to provide financial assistance to startups for proof of concept, prototype development, product trials, market entry, and commercialization.
+
+2. Eligibility Criteria
+- A startup must be recognized by DPIIT.
+- The startup must have been incorporated not more than 2 years ago at the time of application.
+- The applicant's age must be between 18 and 35 years.
+- The business must have a viable business idea with a scope for scale-up.
+- The applicant should not have received more than Rs. 10 Lakhs of monetary support under any other Central or State Government scheme.
+
+3. Funding Support
+Eligible startups can receive up to Rs. 20 Lakhs as grant for validation of Proof of Concept, or prototype development, or product trials. Up to Rs. 50 Lakhs of investment for market entry, commercialization, or scaling up through convertible debentures or debt or debt-linked instruments.
+
+4. Application Process
+The application must be submitted online through the official Startup India portal. The documents required include:
+- Valid Aadhaar Card or PAN Card for age verification.
+- DPIIT Recognition Certificate.
+- Incorporation Certificate marking the exact date of establishment.
+- Brief pitch deck outlining the business scope.

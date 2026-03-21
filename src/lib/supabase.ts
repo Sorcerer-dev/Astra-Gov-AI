@@ -18,3 +18,13 @@ export interface Complaint {
     created_at: string;
     deadline?: string;
 }
+export interface Profile {
+    id: string;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    age: number;
+    annual_income: string;
+    occupation: string;
+    updated_at: string;
+}

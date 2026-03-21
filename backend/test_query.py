@@ -1,0 +1,11 @@
+from main import chat_endpoint, ChatRequest
+request = ChatRequest(query="What is the age limit for Startup India Seed Fund?")
+response = chat_endpoint(request)
+print("---- AI RESPONSE ----")
+print(response.answer)
+print("--------------------")
+request2 = ChatRequest(query="What is the PMEGP scheme?")
+response2 = chat_endpoint(request2)
+print("---- AI RESPONSE 2 ----")
+print(response2.answer)
+print("--------------------")

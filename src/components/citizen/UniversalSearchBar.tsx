@@ -1,10 +1,13 @@
 "use client";
 
-import { Search, CheckCircle2, XCircle, Info, ChevronRight, AlertCircle, MessageSquare } from "lucide-react";
+import { Search, CheckCircle2, XCircle, Info, ChevronRight, AlertCircle, MessageSquare, Bot, Mic } from "lucide-react";
 import { useState } from "react";
 import ThinkingOverlay from "@/components/shared/ThinkingOverlay";
-import { mockSchemes, mockComplaints } from "@/lib/mock_data";
+import VoiceAssistant from "@/components/citizen/VoiceAssistant";
+import { mockComplaints } from "@/lib/mock_data";
 import { cn } from "@/lib/utils";
+
+const BACKEND_URL = "http://localhost:8000";
 
 export default function UniversalSearchBar() {
     const [query, setQuery] = useState("");
@@ -12,40 +15,55 @@ export default function UniversalSearchBar() {
     const [hasSearched, setHasSearched] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [selectedScheme, setSelectedScheme] = useState<any | null>(null);
+    const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+    const [showVoice, setShowVoice] = useState(false);
 
-    const handleSearch = (e: React.FormEvent) => {
+    const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        const trimmedQuery = query.trim().toLowerCase();
+        const trimmedQuery = query.trim();
         if (!trimmedQuery) {
             setResults([]);
+            setAiAnswer(null);
             return;
         }
 
         setIsThinking(true);
         setHasSearched(true);
-        setResults([]); // Clear previous results
+        setResults([]);
+        setAiAnswer(null);
 
-        // Simulate AI search processing
-        setTimeout(() => {
-            const filteredSchemes = mockSchemes.filter(s => 
-                s.title.toLowerCase().includes(trimmedQuery) || 
-                s.description.toLowerCase().includes(trimmedQuery)
-            ).map(s => ({ ...s, type: 'scheme' }));
+        try {
+            // Call the RAG backend
+            const response = await fetch(`${BACKEND_URL}/api/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: trimmedQuery }),
+            });
 
-            const filteredComplaints = mockComplaints.filter(c => 
-                c.description.toLowerCase().includes(trimmedQuery) || 
-                c.department.toLowerCase().includes(trimmedQuery)
-            ).map(c => ({ 
-                id: c.id, 
-                title: `Report: ${c.description}`, 
-                description: `Department: ${c.department} | Status: ${c.status}`,
-                type: 'complaint',
-                original: c 
-            }));
+            if (response.ok) {
+                const data = await response.json();
+                setAiAnswer(data.answer);
+            } else {
+                setAiAnswer("Sorry, the AI assistant is currently unavailable. Please try again later.");
+            }
+        } catch {
+            setAiAnswer("Could not reach the AI backend. Please make sure the server is running on port 8000.");
+        }
 
-            setResults([...filteredSchemes, ...filteredComplaints]);
-            setIsThinking(false);
-        }, 3000);
+        // Also filter mock complaints for community issue results
+        const filteredComplaints = mockComplaints.filter(c =>
+            c.description.toLowerCase().includes(trimmedQuery.toLowerCase()) ||
+            c.department.toLowerCase().includes(trimmedQuery.toLowerCase())
+        ).map(c => ({
+            id: c.id,
+            title: `Report: ${c.description}`,
+            description: `Department: ${c.department} | Status: ${c.status}`,
+            type: 'complaint',
+            original: c
+        }));
+
+        setResults(filteredComplaints);
+        setIsThinking(false);
     };
 
     return (
@@ -64,6 +82,14 @@ export default function UniversalSearchBar() {
                     placeholder="Ask about schemes, permits, or report an issue..."
                 />
                 <button
+                    type="button"
+                    onClick={() => setShowVoice(true)}
+                    className="absolute right-[88px] md:right-[104px] top-2 bottom-2 px-3 text-muted-foreground hover:text-violet-500 transition-colors flex items-center justify-center"
+                    title="Voice input"
+                >
+                    <Mic className="w-5 h-5" />
+                </button>
+                <button
                     type="submit"
                     className="absolute right-2 top-2 bottom-2 px-4 md:px-6 bg-primary text-primary-foreground font-medium rounded-full hover:bg-primary/90 transition-colors text-sm md:text-base"
                 >
@@ -71,16 +97,36 @@ export default function UniversalSearchBar() {
                 </button>
             </form>
 
+            <VoiceAssistant isOpen={showVoice} onClose={() => setShowVoice(false)} />
+
             {/* Search Results */}
-            {hasSearched && !isThinking && results.length === 0 && (
+            {hasSearched && !isThinking && !aiAnswer && results.length === 0 && (
                 <div className="mt-8 p-8 bg-muted/20 border border-dashed rounded-3xl text-center fade-in animate-in">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary mb-4">
                         <Search className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <h4 className="text-lg font-bold">No results found</h4>
                     <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-1">
-                        We couldn't find any schemes or issues matching &ldquo;{query}&rdquo;. Try a broader keyword like &ldquo;Business&rdquo; or &ldquo;Salem&rdquo;.
+                        We couldn&apos;t find any information matching &ldquo;{query}&rdquo;. Try a broader keyword like &ldquo;scheme&rdquo; or &ldquo;eligibility&rdquo;.
                     </p>
+                </div>
+            )}
+
+            {/* AI Answer Card */}
+            {aiAnswer && !isThinking && (
+                <div className="mt-8 fade-in animate-in slide-in-from-top-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground px-4 mb-3">AI Response</h3>
+                    <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-start gap-3">
+                            <div className="shrink-0 mt-0.5 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Bot className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-primary mb-1">Astra AI</p>
+                                <p className="text-sm text-foreground/90 leading-relaxed">{aiAnswer}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

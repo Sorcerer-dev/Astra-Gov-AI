@@ -1,6 +1,6 @@
-"use client";
-
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { CopyPlus, Folders, Settings as SettingsIcon, LogOut, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,12 +12,18 @@ interface CitizenSidebarProps {
 }
 
 export default function CitizenSidebar({ currentView, onViewChange }: CitizenSidebarProps) {
+    const router = useRouter();
     const navItems = [
         { id: "dashboard", label: "Dashboard", icon: CopyPlus },
         { id: "activities", label: "My Activity", icon: Folders },
         { id: "complaints", label: "Complaint Portal", icon: MessageSquare },
         { id: "settings", label: "Settings", icon: SettingsIcon },
     ];
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push("/login");
+    };
 
     return (
         <div className="w-64 bg-card border-r h-full flex flex-col justify-between py-6">
@@ -54,7 +60,10 @@ export default function CitizenSidebar({ currentView, onViewChange }: CitizenSid
             </div>
 
             <div className="px-3">
-                <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
                     <LogOut className="w-5 h-5" />
                     <span>Logout</span>
                 </button>

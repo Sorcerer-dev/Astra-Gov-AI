@@ -1,2 +1,16 @@
 fastapi>=0.111.0
 uvicorn>=0.30.1
+chromadb
+langchain
+langchain-community
+langchain-text-splitters
+langchain-chroma
+langchain-huggingface
+pypdf
+sentence-transformers
+langchain-ollama
+transformers
+torch
+sentencepiece
+sacremoses
+python-dotenv
