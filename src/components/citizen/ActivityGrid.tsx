@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { mockActivities } from "@/lib/mock_data";
+import { useState, useEffect } from "react";
 import ActivityCard from "@/components/citizen/ActivityCard";
 import { Inbox, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,8 +9,24 @@ type FilterOption = "All" | "Business" | "Schemes" | "Ongoing" | "Completed";
 
 export default function ActivityGrid() {
     const [filter, setFilter] = useState<FilterOption>("All");
+    const [activities, setActivities] = useState<any[]>([]);
 
-    const filteredActivities = mockActivities.filter(act => {
+    useEffect(() => {
+        const loadActivities = () => {
+            const stored = localStorage.getItem("astra_activities");
+            if (stored) {
+                setActivities(JSON.parse(stored));
+            } else {
+                setActivities([]);
+            }
+        };
+        
+        loadActivities();
+        window.addEventListener("astra_activity_updated", loadActivities);
+        return () => window.removeEventListener("astra_activity_updated", loadActivities);
+    }, []);
+
+    const filteredActivities = activities.filter(act => {
         if (filter === "All") return true;
         if (filter === "Business") return act.type === "business";
         if (filter === "Schemes") return act.type === "scheme";

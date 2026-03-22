@@ -8,7 +8,6 @@ import UniversalSearchBar from "@/components/citizen/UniversalSearchBar";
 import ActivityGrid from "@/components/citizen/ActivityGrid";
 import ComplaintFeed from "@/components/citizen/ComplaintFeed";
 import OnboardingModal from "@/components/citizen/OnboardingModal";
-import VoiceAssistant from "@/components/citizen/VoiceAssistant";
 import { Menu, X, Loader2, Save, Mic } from "lucide-react";
 
 export default function CitizenDashboard() {
@@ -21,7 +20,6 @@ export default function CitizenDashboard() {
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
 
     useEffect(() => {
         const checkUser = async () => {
@@ -122,19 +120,11 @@ export default function CitizenDashboard() {
             </div>
 
             {/* Main Content Pane */}
-            <main className="flex-1 flex flex-col h-full overflow-y-auto w-full relative pb-24 md:pb-0">
+            <main className={currentView === "dashboard" ? "flex-1 flex flex-col h-full w-full relative overflow-hidden" : "flex-1 flex flex-col h-full overflow-y-auto w-full relative pb-24 md:pb-0"}>
 
-                {/* VIEW 1: Clean Dashboard (Hero View) */}
+                {/* VIEW 1: Clean Dashboard (Chat View) */}
                 {currentView === "dashboard" && (
-                    <div className="flex-1 flex flex-col items-center justify-center -mt-20 px-4">
-                        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-center text-foreground">
-                            How can we help you today, {userName}?
-                        </h1>
-                        <p className="text-muted-foreground text-lg mb-8 text-center max-w-xl">
-                            Describe your civic needs, business goals, or issues in plain English.
-                        </p>
-                        <UniversalSearchBar />
-                    </div>
+                    <UniversalSearchBar userName={userName} />
                 )}
 
                 {/* VIEW 2: My Activities */}
@@ -289,18 +279,6 @@ export default function CitizenDashboard() {
                 )}
 
             </main>
-
-            {/* Floating Voice Assistant FAB */}
-            <button
-                onClick={() => setShowVoiceAssistant(true)}
-                className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-br from-violet-500 to-indigo-500 text-white rounded-full shadow-xl shadow-violet-300/50 hover:shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center group"
-                title="Voice Assistant"
-            >
-                <Mic className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            </button>
-
-            {/* Voice Assistant Modal */}
-            <VoiceAssistant isOpen={showVoiceAssistant} onClose={() => setShowVoiceAssistant(false)} />
         </div>
     );
 }

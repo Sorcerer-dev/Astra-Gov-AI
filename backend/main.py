@@ -1,4 +1,7 @@
 import os
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -136,7 +139,7 @@ def translate_text(text: str, source_lang: str, target_lang: str) -> str:
     # Generate translation
     translated_tokens = nllb_model.generate(
         **inputs, 
-        forced_bos_token_id=nllb_tokenizer.lang_code_to_id[tgt_code], 
+        forced_bos_token_id=nllb_tokenizer.convert_tokens_to_ids(tgt_code), 
         max_length=200
     )
     
