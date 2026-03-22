@@ -5,8 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import ThinkingOverlay from "@/components/shared/ThinkingOverlay";
 import { mockComplaints } from "@/lib/mock_data";
 import { cn } from "@/lib/utils";
-
-const BACKEND_URL = "http://localhost:8000";
+import { BACKEND_URL } from "@/lib/api-client";
 
 const LANGUAGES = [
     { code: "hi-IN", name: "Hindi", label: "हिन्दी" },
@@ -141,7 +140,7 @@ export default function UniversalSearchBar({ userName = "Citizen" }: { userName?
             }
         } catch {
             setHistory(prev => prev.map(msg => 
-                msg.id === messageId ? { ...msg, error: "Could not reach the AI backend. Please make sure the server is running on port 8000.", isThinking: false } : msg
+                msg.id === messageId ? { ...msg, error: "Could not reach the AI backend. Please check your internet connection or try again later.", isThinking: false } : msg
             ));
         }
     };

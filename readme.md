@@ -275,6 +275,27 @@ Backend → http://localhost:8000
 - AI document verification  
 - Voice interface for rural users  
 
+## ☁️ Cloud Deployment (Render & Vercel)
+
+For production hosting, use the `cloud-main` branch which is optimized for external APIs (Google Gemini).
+
+### 1. Backend (Render)
+- **Repo:** This repository
+- **Branch:** `cloud-main`
+- **Root Directory:** `./` (or `backend` depending on your setup)
+- **Build Command:** `pip install -r backend/requirements.txt`
+- **Start Command:** `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Enviroment Variables:**
+    - `GOOGLE_API_KEY`: Your Google AI Studio key.
+    - `PYTHON_VERSION`: `3.11.0`
+
+### 2. Frontend (Vercel)
+- **Repo:** This repository
+- **Branch:** `cloud-main`
+- **Framework:** Next.js (Auto-detected)
+- **Environment Variables:**
+    - `NEXT_PUBLIC_API_URL`: The URL of your Render backend (e.g., `https://astra-api.onrender.com`).
+
 ---
 
 # 👨‍💻 Built For

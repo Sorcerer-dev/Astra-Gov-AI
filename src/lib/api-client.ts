@@ -8,9 +8,10 @@ const API_PORT = 8000;
 
 export const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL ||
-    (typeof window !== "undefined" && window.location.hostname !== "localhost"
-        ? `http://${window.location.hostname}:${API_PORT}`
-        : `http://${LOCAL_IP}:${API_PORT}`);
+    (typeof window !== "undefined" && window.location.hostname === "localhost"
+        ? `http://localhost:${API_PORT}`
+        : ""); // Fallback to empty string for relative paths or explicitly provided URLs
+
 
 export async function fetchApi(endpoint: string, options?: RequestInit) {
     const url = `${BACKEND_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;

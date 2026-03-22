@@ -5,12 +5,6 @@ langchain
 langchain-community
 langchain-text-splitters
 langchain-chroma
-langchain-huggingface
+langchain-google-genai
 pypdf
-sentence-transformers
-langchain-ollama
-transformers
-torch
-sentencepiece
-sacremoses
 python-dotenv
