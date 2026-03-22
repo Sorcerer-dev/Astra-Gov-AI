@@ -151,32 +151,55 @@ def chat_endpoint(request: ChatRequest):
 
 @app.post("/api/voice-chat", response_model=VoiceChatResponse)
 def voice_chat_endpoint(request: VoiceChatRequest):
+    """Full voice pipeline with detailed diagnostics."""
     lang_name = request.language 
     
     try:
         # Step 1: Translate query to English
-        english_query = translate_text(request.query, lang_name, "English") if lang_name.lower() != "english" else request.query
+        try:
+            english_query = translate_text(request.query, lang_name, "English") if lang_name.lower() != "english" else request.query
+        except Exception as te:
+            print(f"Query Translation Error: {te}")
+            english_query = request.query # fallback
         
         # Step 2: Run RAG
         if not retriever:
-            english_answer = "RAG Database not initialized."
+            english_answer = "RAG Database not initialized on the server. Please check your data/ ingestion status."
         else:
-            docs = retriever.invoke(english_query)
-            context_text = "\n\n".join([doc.page_content for doc in docs])
-            system_message = SYSTEM_PROMPT.format(context=context_text)
-            response = llm.invoke([
-                SystemMessage(content=system_message),
-                HumanMessage(content=english_query)
-            ])
-            english_answer = response.content
+            try:
+                docs = retriever.invoke(english_query)
+                context_text = "\n\n".join([doc.page_content for doc in docs])
+                system_message = SYSTEM_PROMPT.format(context=context_text)
+                response = llm.invoke([
+                    SystemMessage(content=system_message),
+                    HumanMessage(content=english_query)
+                ])
+                english_answer = response.content
+            except Exception as re:
+                print(f"RAG Error: {re}")
+                # Fallback to direct prompt if RAG fails
+                response = llm.invoke([HumanMessage(content=english_query)])
+                english_answer = response.content
         
         # Step 3: Translate answer back
-        local_answer = translate_text(english_answer, "English", lang_name) if lang_name.lower() != "english" else english_answer
+        try:
+            local_answer = translate_text(english_answer, "English", lang_name) if lang_name.lower() != "english" else english_answer
+        except Exception as ae:
+            print(f"Answer Translation Error: {ae}")
+            local_answer = english_answer
         
         return VoiceChatResponse(
             answer=local_answer,
             original_answer=english_answer,
             translated_query=english_query
+        )
+    except Exception as e:
+        error_detail = str(e)
+        print(f"CRITICAL API Error: {error_detail}")
+        return VoiceChatResponse(
+            answer=f"Backend Error: {error_detail[:100]}...",
+            original_answer="Error occurred during processing.",
+            translated_query=request.query
         )
     except Exception as e:
         print(f"Voice Chat Error: {e}")
