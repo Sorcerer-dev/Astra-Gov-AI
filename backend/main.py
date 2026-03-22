@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
         print("CRITICAL WARNING: GOOGLE_API_KEY not found in environment variables.")
 
     print("Initializing Google Generative AI Embeddings...")
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
     print("Connecting to ChromaDB...")
     if os.path.exists(CHROMA_PATH):

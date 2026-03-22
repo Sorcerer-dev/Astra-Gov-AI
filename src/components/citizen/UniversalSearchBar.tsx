@@ -32,13 +32,22 @@ export interface ChatMessage {
 
 export default function UniversalSearchBar({ userName = "Citizen" }: { userName?: string }) {
     const [query, setQuery] = useState("");
-    const [history, setHistory] = useState<ChatMessage[]>(() => {
+    const [history, setHistory] = useState<ChatMessage[]>([]);
+
+    // Load history on mount to avoid hydration mismatch
+    useEffect(() => {
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("astra_chat_session");
-            return saved ? JSON.parse(saved) : [];
+            if (saved) {
+                try {
+                    setHistory(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to parse chat session", e);
+                }
+            }
         }
-        return [];
-    });
+    }, []);
+
     const [selectedScheme, setSelectedScheme] = useState<any | null>(null);
     
     // Voice Assistant State

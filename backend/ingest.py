@@ -18,7 +18,7 @@ def main():
         return
 
     print("Initializing Google Generative AI Embeddings...")
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
     print(f"Loading documents from {DATA_PATH}...")
     documents = []
