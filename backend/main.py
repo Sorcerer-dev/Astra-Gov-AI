@@ -201,13 +201,6 @@ def voice_chat_endpoint(request: VoiceChatRequest):
             original_answer="Error occurred during processing.",
             translated_query=request.query
         )
-    except Exception as e:
-        print(f"Voice Chat Error: {e}")
-        return VoiceChatResponse(
-            answer="Error processing request.",
-            original_answer="",
-            translated_query=""
-        )
 
 if __name__ == "__main__":
     import uvicorn
