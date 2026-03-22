@@ -37,8 +37,8 @@ async def lifespan(app: FastAPI):
         print(f"Warning: {CHROMA_PATH} not found. RAG will not work until documents are ingested.")
         retriever = None
 
-    print("Initializing Google Gemini 1.5 Flash...")
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+    print("Initializing Google Gemini 2.0 Flash...")
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
         
     yield
     
