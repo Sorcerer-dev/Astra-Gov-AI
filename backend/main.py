@@ -37,8 +37,8 @@ async def lifespan(app: FastAPI):
         print(f"Warning: {CHROMA_PATH} not found. RAG will not work until documents are ingested.")
         retriever = None
 
-    print("Initializing Google Gemini 2.0 Flash...")
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
+    print("Initializing Google Gemini 1.5 Flash (Latest)...")
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0)
         
     yield
     
@@ -155,12 +155,15 @@ def voice_chat_endpoint(request: VoiceChatRequest):
     lang_name = request.language 
     
     try:
-        # Step 1: Translate query to English
-        try:
-            english_query = translate_text(request.query, lang_name, "English") if lang_name.lower() != "english" else request.query
-        except Exception as te:
-            print(f"Query Translation Error: {te}")
-            english_query = request.query # fallback
+        # Step 1: Translate query to English (Smart-Skip if already English)
+        if lang_name.lower() == "english":
+            english_query = request.query
+        else:
+            try:
+                english_query = translate_text(request.query, lang_name, "English")
+            except Exception as te:
+                print(f"Query Translation Error: {te}")
+                english_query = request.query # fallback
         
         # Step 2: Run RAG
         if not retriever:
@@ -181,12 +184,15 @@ def voice_chat_endpoint(request: VoiceChatRequest):
                 response = llm.invoke([HumanMessage(content=english_query)])
                 english_answer = response.content
         
-        # Step 3: Translate answer back
-        try:
-            local_answer = translate_text(english_answer, "English", lang_name) if lang_name.lower() != "english" else english_answer
-        except Exception as ae:
-            print(f"Answer Translation Error: {ae}")
+        # Step 3: Translate answer back (Smart-Skip if already English)
+        if lang_name.lower() == "english":
             local_answer = english_answer
+        else:
+            try:
+                local_answer = translate_text(english_answer, "English", lang_name)
+            except Exception as ae:
+                print(f"Answer Translation Error: {ae}")
+                local_answer = english_answer
         
         return VoiceChatResponse(
             answer=local_answer,
