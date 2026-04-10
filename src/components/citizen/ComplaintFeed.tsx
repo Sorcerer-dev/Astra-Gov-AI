@@ -15,6 +15,16 @@ export default function ComplaintFeed() {
     const [selectedLng, setSelectedLng] = useState(78.146);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [showAllLocations, setShowAllLocations] = useState(true);
+
+    const fetchSettings = useCallback(async () => {
+        const { data } = await supabase
+            .from('system_settings')
+            .select('show_all_locations')
+            .eq('id', 'global')
+            .single();
+        if (data) setShowAllLocations(data.show_all_locations ?? true);
+    }, []);
 
     const fetchComplaints = useCallback(async () => {
         setIsLoading(true);
@@ -37,8 +47,22 @@ export default function ComplaintFeed() {
     }, []);
 
     useEffect(() => {
+        fetchSettings();
         fetchComplaints();
-    }, [fetchComplaints]);
+    }, [fetchComplaints, fetchSettings]);
+
+    // Filtering logic based on admin settings
+    const filteredComplaints = complaints.filter(complaint => {
+        if (showAllLocations) return true;
+        
+        // If privacy is ON, only show matching locations
+        if (selectedLocation === "Click to select location") return false; // Show nothing until location chosen
+        
+        return (
+            selectedLocation.toLowerCase().includes(complaint.location.toLowerCase()) || 
+            complaint.location.toLowerCase().includes(selectedLocation.toLowerCase())
+        );
+    });
 
     const handleLocationSelect = (name: string, lat: number, lng: number) => {
         setSelectedLocation(name);
@@ -89,17 +113,22 @@ export default function ComplaintFeed() {
                         <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
                         <p className="text-muted-foreground font-medium">Loading complaints...</p>
                     </div>
-                ) : complaints.length === 0 ? (
+                ) : filteredComplaints.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 mt-12 text-center fade-in animate-in">
                         <div className="w-16 h-16 bg-secondary rounded-full flex justify-center items-center text-muted-foreground mb-4">
                             <MapPin className="w-8 h-8" />
                         </div>
                         <h3 className="text-xl font-bold">No issues found</h3>
-                        <p className="text-muted-foreground mt-2">There are currently no reported issues. Be the first to report one!</p>
+                        <p className="text-muted-foreground mt-2 max-w-sm">
+                            {showAllLocations 
+                                ? "There are currently no reported issues in the database." 
+                                : `There are no issues reported in ${selectedLocation === "Click to select location" ? "this area" : selectedLocation}. Select your ward to check for local issues.`
+                            }
+                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max pb-8">
-                        {complaints.map((complaint) => {
+                        {filteredComplaints.map((complaint) => {
                             const isLocalMatch = selectedLocation !== "Click to select location" && (
                                 selectedLocation.toLowerCase().includes(complaint.location.toLowerCase()) || 
                                 complaint.location.toLowerCase().includes(selectedLocation.toLowerCase())

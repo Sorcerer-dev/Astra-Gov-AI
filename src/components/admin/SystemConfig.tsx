@@ -1,5 +1,5 @@
 import { Save, Shield, Brain, Sliders, Bell, Globe, CheckCircle2, Loader2, RefreshCcw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -12,6 +12,7 @@ export default function SystemConfig() {
     const [autoCategorize, setAutoCategorize] = useState(true);
     const [anonReporting, setAnonReporting] = useState(false);
     const [publicFeed, setPublicFeed] = useState(true);
+    const [showAllLocations, setShowAllLocations] = useState(true);
     const [sensitivity, setSensitivity] = useState(50);
 
     // Fetch current settings on load
@@ -28,6 +29,7 @@ export default function SystemConfig() {
                 setAutoCategorize(data.auto_categorize);
                 setAnonReporting(data.anonymous_reporting);
                 setPublicFeed(data.public_feed);
+                setShowAllLocations(data.show_all_locations ?? true);
                 setSensitivity(data.nlp_sensitivity);
             }
             setLoading(false);
@@ -44,6 +46,7 @@ export default function SystemConfig() {
                 auto_categorize: autoCategorize,
                 anonymous_reporting: anonReporting,
                 public_feed: publicFeed,
+                show_all_locations: showAllLocations,
                 nlp_sensitivity: sensitivity,
                 updated_at: new Date().toISOString()
             });
@@ -174,6 +177,24 @@ export default function SystemConfig() {
                                 <div className={cn(
                                     "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
                                     publicFeed ? "right-1" : "left-1"
+                                )} />
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border">
+                            <div className="space-y-0.5">
+                                <p className="text-sm font-bold">Cross-Location Visibility</p>
+                                <p className="text-xs text-muted-foreground">Allow citizens to see reports from other wards.</p>
+                            </div>
+                            <button 
+                                onClick={() => setShowAllLocations(!showAllLocations)}
+                                className={cn(
+                                    "w-10 h-5 rounded-full relative transition-colors",
+                                    showAllLocations ? "bg-primary" : "bg-muted"
+                                )}
+                            >
+                                <div className={cn(
+                                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
+                                    showAllLocations ? "right-1" : "left-1"
                                 )} />
                             </button>
                         </div>
