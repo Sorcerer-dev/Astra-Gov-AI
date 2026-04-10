@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { User, Camera, LogOut, Settings, X, Loader2 } from "lucide-react";
+import { User, Camera, LogOut, Settings, X, Loader2, Eye } from "lucide-react";
+import EditProfileModal from "./EditProfileModal";
 
 interface ProfilePanelProps {
     onNavigateSettings?: () => void;
@@ -179,16 +180,22 @@ export default function ProfilePanel({ onNavigateSettings }: ProfilePanelProps) 
 
                     {/* Actions */}
                     <div className="p-4 space-y-1">
+                        <EditProfileModal 
+                            user={user} 
+                            currentFullName={fullName} 
+                            onUpdate={() => window.location.reload()} 
+                        />
+                        
                         <button
                             onClick={() => { onNavigateSettings?.(); setOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-blue-50 transition-colors"
                         >
-                            <Settings className="w-4 h-4" />
-                            Edit Profile & Settings
+                            <Eye className="w-4 h-4" />
+                            View Records & Stats
                         </button>
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors border-t border-slate-50 mt-1 pt-3"
                         >
                             <LogOut className="w-4 h-4" />
                             Sign Out
