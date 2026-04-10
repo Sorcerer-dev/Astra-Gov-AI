@@ -8,9 +8,10 @@ interface EditProfileModalProps {
     user: any;
     currentFullName: string;
     onUpdate: () => void;
+    onOpen?: () => void;
 }
 
-export default function EditProfileModal({ user, currentFullName, onUpdate }: EditProfileModalProps) {
+export default function EditProfileModal({ user, currentFullName, onUpdate, onOpen }: EditProfileModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({
@@ -58,7 +59,7 @@ export default function EditProfileModal({ user, currentFullName, onUpdate }: Ed
     return (
         <>
             <button
-                onClick={() => setIsOpen(true)}
+                onClick={() => { setIsOpen(true); onOpen?.(); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-blue-700 bg-blue-50/50 hover:bg-blue-100/50 transition-colors"
             >
                 <User className="w-4 h-4" />

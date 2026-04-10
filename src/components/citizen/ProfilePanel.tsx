@@ -111,9 +111,9 @@ export default function ProfilePanel({ onNavigateSettings }: ProfilePanelProps) 
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full" />
             </button>
 
-            {/* Dropdown Panel */}
+            {/* Dropdown Panel - Positioned to pop out of the sidebar */}
             {open && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute left-14 bottom-0 w-80 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-left-4 duration-300">
                     {/* Header */}
                     <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 px-6 pt-6 pb-6">
                         <button
@@ -183,7 +183,8 @@ export default function ProfilePanel({ onNavigateSettings }: ProfilePanelProps) 
                         <EditProfileModal 
                             user={user} 
                             currentFullName={fullName} 
-                            onUpdate={() => window.location.reload()} 
+                            onUpdate={() => { setOpen(false); window.location.reload(); }} 
+                            onOpen={() => setOpen(false)}
                         />
                         
                         <button
