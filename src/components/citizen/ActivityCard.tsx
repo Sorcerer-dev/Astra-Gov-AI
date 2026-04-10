@@ -1,8 +1,9 @@
 "use client";
 
-import { CheckCircle2, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface ChecklistTask {
     name: string;
@@ -10,6 +11,7 @@ interface ChecklistTask {
 }
 
 interface ActivityCardProps {
+    id: string;
     title: string;
     progress: number;
     type: string;
@@ -17,18 +19,44 @@ interface ActivityCardProps {
     tasks: ChecklistTask[];
 }
 
-export default function ActivityCard({ title, progress: initialProgress, type, status, tasks: initialTasks }: ActivityCardProps) {
+export default function ActivityCard({ id, title, progress: initialProgress, type, status, tasks: initialTasks }: ActivityCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [currentTasks, setCurrentTasks] = useState(initialTasks);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Calculate progress based on completed tasks
     const completedCount = currentTasks.filter(t => t.completed).length;
     const calculatedProgress = Math.round((completedCount / currentTasks.length) * 100);
 
-    const toggleTask = (index: number) => {
+    const toggleTask = async (index: number) => {
+        // Optimistic update
         const newTasks = [...currentTasks];
         newTasks[index].completed = !newTasks[index].completed;
+        const oldTasks = currentTasks;
         setCurrentTasks(newTasks);
+
+        // If it's a real DB record (not a mock starting with 'act-')
+        if (id && !id.startsWith('act-')) {
+            setIsSaving(true);
+            try {
+                const newProgress = Math.round((newTasks.filter(t => t.completed).length / newTasks.length) * 100);
+                const { error } = await supabase
+                    .from('activities')
+                    .update({ 
+                        tasks: newTasks,
+                        progress: newProgress,
+                        status: newProgress === 100 ? 'completed' : status
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+            } catch (err) {
+                console.error("Failed to save task status:", err);
+                setCurrentTasks(oldTasks); // Rollback
+            } finally {
+                setIsSaving(false);
+            }
+        }
     };
 
     return (
@@ -53,7 +81,10 @@ export default function ActivityCard({ title, progress: initialProgress, type, s
                 {/* Progress Display */}
                 <div className="space-y-2">
                     <div className="flex justify-between items-end">
-                        <span className="text-sm font-medium text-muted-foreground">Completion</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">Completion</span>
+                            {isSaving && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
+                        </div>
                         <span className="text-2xl font-bold tracking-tight text-primary">{calculatedProgress}%</span>
                     </div>
                     <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">

@@ -1,24 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { mockUserLocation } from "@/lib/mock_data";
 import { supabase, Complaint } from "@/lib/supabase";
 import ComplaintCard from "@/components/citizen/ComplaintCard";
 import ReportIssueDrawer from "@/components/citizen/ReportIssueDrawer";
+import LocationPickerMap from "@/components/citizen/LocationPickerMap";
 import { MapPin, Filter, Loader2 } from "lucide-react";
 
 export default function ComplaintFeed() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [selectedLocation, setSelectedLocation] = useState<string>(mockUserLocation);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [selectedLocation, setSelectedLocation] = useState("Click to select location");
+    const [selectedLat, setSelectedLat] = useState(11.6643);
+    const [selectedLng, setSelectedLng] = useState(78.146);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    const locations = [
-        mockUserLocation, // "Salem, Ward 4"
-        "Chennai, Zone East",
-        "Coimbatore, Central",
-        "Madurai, South"
-    ];
 
     const fetchComplaints = useCallback(async () => {
         setIsLoading(true);
@@ -44,18 +40,20 @@ export default function ComplaintFeed() {
         fetchComplaints();
     }, [fetchComplaints]);
 
-    const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedLocation(e.target.value);
+    const handleLocationSelect = (name: string, lat: number, lng: number) => {
+        setSelectedLocation(name);
+        setSelectedLat(lat);
+        setSelectedLng(lng);
     };
 
     const handleSubmitSuccess = () => {
-        fetchComplaints(); // Re-fetch complaints after a new one is submitted
+        fetchComplaints();
     };
 
     return (
         <div className="h-full flex flex-col pt-2">
 
-            {/* Top Header Section (Location Switcher & Actions) */}
+            {/* Top Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-6">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight mb-2">Complaint Portal</h1>
@@ -63,21 +61,14 @@ export default function ComplaintFeed() {
                 </div>
 
                 <div className="flex items-center space-x-3 w-full md:w-auto">
-                    {/* Location Selector */}
-                    <div className="relative flex-1 md:flex-none">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <select
-                            value={selectedLocation}
-                            onChange={handleLocationChange}
-                            className="w-full md:w-56 pl-9 pr-8 py-2 bg-secondary text-sm font-semibold rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-primary shadow-sm border border-transparent focus:border-primary/20 cursor-pointer"
-                        >
-                            {locations.map(loc => (
-                                <option key={loc} value={loc}>{loc}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Location Selector - Now opens map */}
+                    <button
+                        onClick={() => setIsMapOpen(true)}
+                        className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-secondary text-sm font-semibold rounded-xl shadow-sm border border-transparent hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 transition-all cursor-pointer min-w-0"
+                    >
+                        <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                        <span className="truncate max-w-[200px]">{selectedLocation}</span>
+                    </button>
 
                     <button className="p-2 border rounded-xl hover:bg-secondary transition-colors shadow-sm hidden md:block">
                         <Filter className="w-4 h-4 text-muted-foreground" />
@@ -109,8 +100,10 @@ export default function ComplaintFeed() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max pb-8">
                         {complaints.map((complaint) => {
-                            const isLocalMatch = selectedLocation.toLowerCase().includes(complaint.location.toLowerCase()) || 
-                                               complaint.location.toLowerCase().includes(selectedLocation.toLowerCase());
+                            const isLocalMatch = selectedLocation !== "Click to select location" && (
+                                selectedLocation.toLowerCase().includes(complaint.location.toLowerCase()) || 
+                                complaint.location.toLowerCase().includes(selectedLocation.toLowerCase())
+                            );
 
                             return (
                                 <div key={complaint.id} className="fade-in animate-in slide-in-from-bottom-4 duration-500">
@@ -134,12 +127,21 @@ export default function ComplaintFeed() {
                 )}
             </div>
 
-            {/* Slide-in Drawer Portal */}
+            {/* Report Issue Drawer */}
             <ReportIssueDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
-                mockLocation={mockUserLocation}
+                mockLocation={selectedLocation !== "Click to select location" ? selectedLocation : "Salem, Ward 4"}
                 onSubmitSuccess={handleSubmitSuccess}
+            />
+
+            {/* Location Picker Map Modal */}
+            <LocationPickerMap
+                isOpen={isMapOpen}
+                onClose={() => setIsMapOpen(false)}
+                onSelectLocation={handleLocationSelect}
+                initialLat={selectedLat}
+                initialLng={selectedLng}
             />
         </div>
     );

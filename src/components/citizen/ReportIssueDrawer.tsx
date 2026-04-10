@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { X, MapPin, Camera, UploadCloud, ChevronRight, CheckCircle2, Loader2, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, MapPin, Camera, UploadCloud, ChevronRight, CheckCircle2, Loader2, Clock, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import LocationPickerMap from "@/components/citizen/LocationPickerMap";
 
 interface ReportIssueDrawerProps {
     isOpen: boolean;
@@ -54,9 +55,27 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
     const [error, setError] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [location, setLocation] = useState(mockLocation);
-    const [isEditingLocation, setIsEditingLocation] = useState(false);
+    const [locationLat, setLocationLat] = useState(11.6643);
+    const [locationLng, setLocationLng] = useState(78.146);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    
+    // System Config State
+    const [autoCategorizeEnabled, setAutoCategorizeEnabled] = useState(true);
+    const [manualDept, setManualDept] = useState("General Administration");
 
-    const detectedDeptAssigned = detectDeptAssigned(description);
+    useEffect(() => {
+        async function loadConfig() {
+            const { data } = await supabase
+                .from('system_settings')
+                .select('auto_categorize')
+                .eq('id', 'global')
+                .single();
+            if (data) setAutoCategorizeEnabled(data.auto_categorize);
+        }
+        if (isOpen) loadConfig();
+    }, [isOpen]);
+
+    const detectedDeptAssigned = autoCategorizeEnabled ? detectDeptAssigned(description) : manualDept;
     const isSuccess = step === 4;
 
     const handleSubmit = async () => {
@@ -98,7 +117,7 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
         setError(null);
         setSelectedFile(null);
         setLocation(mockLocation);
-        setIsEditingLocation(false);
+        setIsMapOpen(false);
         onClose();
     };
 
@@ -152,12 +171,31 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                             />
-                            {description.trim() && (
+                            {description.trim() && autoCategorizeEnabled && (
                                 <div className="bg-primary/10 border-l-4 border-primary p-4 rounded-r-lg">
                                     <p className="text-sm font-medium text-primary flex items-center">
                                         <CheckCircle2 className="w-4 h-4 mr-2" />
                                         AI detected Category: <span className="font-bold ml-1">{detectedDeptAssigned}</span>
                                     </p>
+                                </div>
+                            )}
+
+                            {description.trim() && !autoCategorizeEnabled && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Select Department</label>
+                                    <select 
+                                        value={manualDept}
+                                        onChange={(e) => setManualDept(e.target.value)}
+                                        className="w-full p-3 bg-secondary/50 border rounded-xl focus:ring-2 focus:ring-primary outline-none"
+                                    >
+                                        <option>General Administration</option>
+                                        <option>Municipal Sanitation</option>
+                                        <option>Public Works Department</option>
+                                        <option>Electricity Board</option>
+                                        <option>Water Supply Department</option>
+                                        <option>Parks & Recreation</option>
+                                    </select>
+                                    <p className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">AI Categorization is currently disabled by admin.</p>
                                 </div>
                             )}
                         </div>
@@ -168,38 +206,40 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
                         <div className="space-y-4 fade-in animate-in">
                             <div>
                                 <h3 className="text-lg font-bold mb-1">Confirm Location</h3>
-                                <p className="text-sm text-muted-foreground">We need exact coordinates to send the response team.</p>
+                                <p className="text-sm text-muted-foreground">Pick the exact location of the issue on the map.</p>
                             </div>
+
+                            {/* Location display card */}
                             <div className="border rounded-xl overflow-hidden shadow-sm">
-                                <div className="h-40 bg-secondary flex items-center justify-center relative">
-                                    <MapPin className="w-8 h-8 text-primary absolute animate-bounce" />
-                                    {/* Simulated map background grid */}
-                                    <svg className="absolute inset-0 w-full h-full text-muted opacity-50" fill="none" stroke="currentColor" viewBox="0 0 100 100">
-                                        <path d="M0 20 L 100 20 M 0 40 L 100 40 M 0 60 L 100 60 M 0 80 L 100 80" strokeWidth="0.5" />
-                                        <path d="M20 0 L 20 100 M 40 0 L 40 100 M 60 0 L 60 100 M 80 0 L 80 100" strokeWidth="0.5" />
-                                    </svg>
-                                </div>
-                                <div className="p-4 bg-card flex justify-between items-center">
-                                    <div className="flex-1 mr-4">
-                                        <p className="font-semibold text-sm">Detected GPS Pin</p>
-                                        {isEditingLocation ? (
-                                            <input
-                                                className="w-full text-xs bg-secondary/50 border rounded px-2 py-1 focus:ring-1 focus:ring-primary outline-none mt-1"
-                                                value={location}
-                                                onChange={(e) => setLocation(e.target.value)}
-                                                autoFocus
-                                            />
-                                        ) : (
-                                            <p className="text-xs text-muted-foreground">{location} (Accurate to 5m)</p>
-                                        )}
+                                <div className="p-4 bg-card">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                            <MapPin className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-muted-foreground font-medium">Selected Location</p>
+                                            <p className="text-sm font-semibold text-foreground truncate">{location}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                {locationLat.toFixed(4)}°N, {locationLng.toFixed(4)}°E
+                                            </p>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={() => setIsEditingLocation(!isEditingLocation)}
-                                        className="text-primary text-sm font-medium hover:underline shrink-0"
-                                    >
-                                        {isEditingLocation ? "Save" : "Edit"}
-                                    </button>
                                 </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMapOpen(true)}
+                                    className="w-full py-3 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 text-sm font-semibold border-t flex items-center justify-center gap-2 hover:from-blue-100 hover:to-indigo-100 transition-all"
+                                >
+                                    <Navigation className="w-4 h-4" />
+                                    Open Map &amp; Choose Location
+                                </button>
+                            </div>
+
+                            <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-lg">
+                                <p className="text-xs font-medium text-blue-700">
+                                    💡 Tip: Click "Open Map" above, then tap on the map to place a pin at the exact issue spot. You can also search by place name or use GPS.
+                                </p>
                             </div>
                         </div>
                     )}
@@ -305,6 +345,19 @@ export default function ReportIssueDrawer({ isOpen, onClose, mockLocation, onSub
                 </div>
 
             </div>
+
+            {/* Map Picker Modal */}
+            <LocationPickerMap
+                isOpen={isMapOpen}
+                onClose={() => setIsMapOpen(false)}
+                onSelectLocation={(name, lat, lng) => {
+                    setLocation(name);
+                    setLocationLat(lat);
+                    setLocationLng(lng);
+                }}
+                initialLat={locationLat}
+                initialLng={locationLng}
+            />
         </>
     );
 }

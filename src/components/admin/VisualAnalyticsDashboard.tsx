@@ -1,7 +1,9 @@
 "use client";
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { AlertCircle, FileText, CheckCircle2, ServerCrash, Clock, Activity, Zap } from "lucide-react";
+import { AlertCircle, FileText, CheckCircle2, ServerCrash, Clock, Activity, Zap, Loader2, Download } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const departmentData = [
     { name: "PWD", count: 42 },
@@ -18,6 +20,26 @@ const statusData = [
 ];
 
 export default function VisualAnalyticsDashboard() {
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportSuccess, setExportSuccess] = useState(false);
+
+    const handleExport = () => {
+        setIsExporting(true);
+        // Simulate PDF/CSV generation
+        setTimeout(() => {
+            setIsExporting(false);
+            setExportSuccess(true);
+            
+            // Revert success icon after 3 seconds
+            setTimeout(() => setExportSuccess(false), 3000);
+            
+            // Actual file download simulation
+            const msg = "Municipal_Health_Report_" + new Date().toISOString().split('T')[0] + ".pdf";
+            console.log("Downloading " + msg);
+            alert("Report Generated: " + msg + " has been saved to your downloads.");
+        }, 2000);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between mb-2">
@@ -27,9 +49,24 @@ export default function VisualAnalyticsDashboard() {
                 </div>
                 <div className="flex space-x-2">
                     <button className="px-3 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-lg">Last 7 Days</button>
-                    <button className="px-3 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-lg flex items-center shadow-sm">
-                        <FileText className="w-4 h-4 mr-1.5" />
-                        Export Report
+                    <button 
+                        onClick={handleExport}
+                        disabled={isExporting}
+                        className={cn(
+                            "px-4 py-1.5 text-sm font-bold border-2 rounded-xl flex items-center shadow-sm transition-all",
+                            exportSuccess 
+                                ? "bg-green-100 border-green-500 text-green-700" 
+                                : "bg-card border-primary/20 text-foreground hover:border-primary/50 hover:bg-secondary"
+                        )}
+                    >
+                        {isExporting ? (
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                        ) : exportSuccess ? (
+                            <CheckCircle2 className="w-4 h-4 mr-1.5 text-green-600" />
+                        ) : (
+                            <Download className="w-4 h-4 mr-1.5 text-primary" />
+                        )}
+                        {isExporting ? "Generating..." : exportSuccess ? "Exported!" : "Export Report"}
                     </button>
                 </div>
             </div>

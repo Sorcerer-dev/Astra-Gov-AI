@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { LayoutDashboard, ShieldAlert, Users, Settings as SettingsIcon, LogOut, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export type AdminSidebarView = "analytics" | "triage" | "citizens" | "settings";
 
@@ -12,6 +14,13 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ currentView, onViewChange }: AdminSidebarProps) {
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push("/login");
+    };
+
     const navItems = [
         { id: "analytics", label: "Visual Analytics", icon: BarChart3 },
         { id: "triage", label: "Complaint Triage", icon: ShieldAlert },
@@ -58,7 +67,10 @@ export default function AdminSidebar({ currentView, onViewChange }: AdminSidebar
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1">Nodal Officer</p>
                     <p className="text-sm font-medium">Chennai Zone East</p>
                 </div>
-                <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-destructive/10 text-destructive transition-colors">
+                <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-destructive/10 text-destructive transition-colors"
+                >
                     <LogOut className="w-5 h-5" />
                     <span>Exit Center</span>
                 </button>

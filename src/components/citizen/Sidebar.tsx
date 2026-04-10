@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { CopyPlus, Folders, Settings as SettingsIcon, LogOut, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export type SidebarView = "dashboard" | "activities" | "complaints" | "settings";
 
@@ -12,6 +14,13 @@ interface CitizenSidebarProps {
 }
 
 export default function CitizenSidebar({ currentView, onViewChange }: CitizenSidebarProps) {
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push("/login");
+    };
+
     const navItems = [
         { id: "dashboard", label: "Dashboard", icon: CopyPlus },
         { id: "activities", label: "My Activity", icon: Folders },
@@ -54,7 +63,10 @@ export default function CitizenSidebar({ currentView, onViewChange }: CitizenSid
             </div>
 
             <div className="px-3">
-                <button className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
                     <LogOut className="w-5 h-5" />
                     <span>Logout</span>
                 </button>

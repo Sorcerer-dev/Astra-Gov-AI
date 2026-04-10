@@ -1,10 +1,11 @@
 "use client";
 
-import { Search, CheckCircle2, XCircle, Info, ChevronRight, AlertCircle, MessageSquare } from "lucide-react";
+import { Search, CheckCircle2, XCircle, Info, ChevronRight, AlertCircle, MessageSquare, Loader2 } from "lucide-react";
 import { useState } from "react";
 import ThinkingOverlay from "@/components/shared/ThinkingOverlay";
 import { mockSchemes, mockComplaints } from "@/lib/mock_data";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 export default function UniversalSearchBar() {
     const [query, setQuery] = useState("");
@@ -12,6 +13,13 @@ export default function UniversalSearchBar() {
     const [hasSearched, setHasSearched] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [selectedScheme, setSelectedScheme] = useState<any | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [toast, setToast] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,9 +56,65 @@ export default function UniversalSearchBar() {
         }, 3000);
     };
 
+    const handleAddToActivity = async (scheme: any, isApply: boolean = false) => {
+        setActionLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                showToast('error', "You must be signed in to add activities.");
+                return;
+            }
+
+            // Default tasks for a scheme
+            const defaultTasks = [
+                { name: "Verify eligibility requirements", completed: true },
+                { name: "Gather required documents", completed: false },
+                { name: "Submit application form", completed: isApply },
+                { name: "Verify submission status", completed: false }
+            ];
+
+            const { error } = await supabase.from('activities').insert({
+                user_id: user.id,
+                title: scheme.title,
+                type: 'scheme',
+                status: isApply ? 'applied' : 'ongoing',
+                progress: isApply ? 75 : 25,
+                tasks: defaultTasks
+            });
+
+            if (error) throw error;
+
+            showToast('success', isApply ? `Successfully applied for ${scheme.title}!` : `Added ${scheme.title} to your activities.`);
+            setSelectedScheme(null);
+            
+            // Redirect to activities after short delay
+            if (isApply) {
+                setTimeout(() => {
+                    window.location.href = "/?view=activities";
+                }, 1500);
+            }
+        } catch (err: any) {
+            console.error("Action failed:", err);
+            showToast('error', `Action failed: ${err.message}. Make sure the activities table exists.`);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     return (
         <div className="w-full max-w-3xl mx-auto mt-6 md:mt-12 mb-8 px-4 w-full relative">
             <ThinkingOverlay isVisible={isThinking} />
+
+            {/* Toast Feedbacks */}
+            {toast && (
+                <div className={cn(
+                    "fixed top-24 right-6 z-[100] px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-3 animate-in slide-in-from-right-4 duration-300",
+                    toast.type === 'success' ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
+                )}>
+                    {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <AlertCircle className="w-5 h-5 text-red-500" />}
+                    <span className="font-bold text-sm tracking-tight">{toast.message}</span>
+                </div>
+            )}
             
             <form onSubmit={handleSearch} className="relative group w-full z-10">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -152,7 +216,7 @@ export default function UniversalSearchBar() {
                                 onClick={() => setSelectedScheme(null)}
                                 className="p-2 hover:bg-secondary rounded-full transition-colors"
                             >
-                                <AlertCircle className="w-5 h-5 text-muted-foreground" />
+                                <XCircle className="w-5 h-5 text-muted-foreground" />
                             </button>
                         </div>
                         
@@ -192,7 +256,7 @@ export default function UniversalSearchBar() {
                             )}
                         </div>
 
-                        <div className="p-6 bg-muted/10 border-t flex gap-3">
+                        <div className="p-6 bg-muted/10 border-t flex flex-col md:flex-row gap-3">
                             <button 
                                 onClick={() => setSelectedScheme(null)}
                                 className="flex-1 px-4 py-3 bg-secondary text-secondary-foreground font-bold rounded-2xl hover:bg-secondary/80 transition-colors"
@@ -200,10 +264,24 @@ export default function UniversalSearchBar() {
                                 Close
                             </button>
                             {selectedScheme.eligibility.is_eligible && (
-                                <button className="flex-1 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-2xl hover:bg-primary/90 transition-primary flex items-center justify-center gap-2">
-                                    <span>Apply Now</span>
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                                <>
+                                    <button 
+                                        onClick={() => handleAddToActivity(selectedScheme, false)}
+                                        disabled={actionLoading}
+                                        className="flex-1 px-4 py-3 bg-indigo-500 text-white font-bold rounded-2xl hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
+                                        <span>Add to Activity</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => handleAddToActivity(selectedScheme, true)}
+                                        disabled={actionLoading}
+                                        className="flex-1 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-2xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+                                        <span>Apply Now</span>
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
