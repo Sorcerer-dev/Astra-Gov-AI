@@ -1,17 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { mockActivities } from "@/lib/mock_data";
 import ActivityCard from "@/components/citizen/ActivityCard";
-import { Inbox, LayoutGrid } from "lucide-react";
+import { Inbox, LayoutGrid, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 type FilterOption = "All" | "Business" | "Schemes" | "Ongoing" | "Completed";
 
 export default function ActivityGrid() {
     const [filter, setFilter] = useState<FilterOption>("All");
+    const [activities, setActivities] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const filteredActivities = mockActivities.filter(act => {
+    const fetchActivities = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setActivities(mockActivities);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('activities')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn("Table 'activities' might not exist yet. Using mock data.");
+                setActivities(mockActivities);
+            } else {
+                // Merge with mock if empty to show something, or just use real data
+                setActivities(data && data.length > 0 ? [...data, ...mockActivities] : mockActivities);
+            }
+        } catch (err) {
+            console.error("Fetch error:", err);
+            setActivities(mockActivities);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchActivities();
+    }, [fetchActivities]);
+
+    const filteredActivities = activities.filter(act => {
         if (filter === "All") return true;
         if (filter === "Business") return act.type === "business";
         if (filter === "Schemes") return act.type === "scheme";
@@ -49,7 +86,11 @@ export default function ActivityGrid() {
             </div>
 
             {/* Grid Content */}
-            {filteredActivities.length === 0 ? (
+            {isLoading ? (
+                <div className="flex-1 flex items-center justify-center p-12">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                </div>
+            ) : filteredActivities.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center max-w-md mx-auto fade-in animate-in">
                     <div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mb-6 text-muted-foreground">
                         <Inbox className="w-10 h-10" />

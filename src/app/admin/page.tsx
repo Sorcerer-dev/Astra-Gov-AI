@@ -5,6 +5,8 @@ import AdminSidebar, { AdminSidebarView } from "@/components/admin/Sidebar";
 import KPICards from "@/components/admin/KPICards";
 import PriorityTriageTable from "@/components/admin/PriorityTriageTable";
 import VisualAnalyticsDashboard from "@/components/admin/VisualAnalyticsDashboard";
+import CitizenDirectory from "@/components/admin/CitizenDirectory";
+import SystemConfig from "@/components/admin/SystemConfig";
 import { Menu, X, ShieldAlert } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -75,16 +77,16 @@ export default function AdminDashboardPage() {
                     </div>
                 )}
 
-                {/* VIEW 3 & 4: Placeholder States */}
+                {/* VIEW 3 & 4: Functional Administrative Modules */}
                 {currentView === "citizens" && (
-                    <div className="flex-1 border-2 border-dashed rounded-2xl flex items-center justify-center text-muted-foreground">
-                        Citizen Directory Database - Phase 2 Integration Pending
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <CitizenDirectory />
                     </div>
                 )}
 
                 {currentView === "settings" && (
-                    <div className="flex-1 border-2 border-dashed rounded-2xl flex items-center justify-center text-muted-foreground">
-                        System Configuration Terminal
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-foreground">
+                        <SystemConfig />
                     </div>
                 )}
 

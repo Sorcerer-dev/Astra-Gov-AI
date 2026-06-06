@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
+import AuthProvider from "@/components/shared/AuthProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+// Using system fonts to avoid download timeouts in dev
+const fontClassName = "font-sans";
 
-export const metadata: Metadata = {
+export const metadata = {
     title: "Astra Gov AI",
-    description: "Agentic Civic Operating System for Transparent Governance",
+    description: "Transparent Governance for Every Citizen",
 };
 
 export default function RootLayout({
@@ -16,7 +16,11 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="light">
-            <body className={inter.className}>{children}</body>
+            <body className={fontClassName}>
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
+            </body>
         </html>
     );
 }

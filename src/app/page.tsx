@@ -1,15 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import CitizenSidebar, { SidebarView } from "@/components/citizen/Sidebar";
 import UniversalSearchBar from "@/components/citizen/UniversalSearchBar";
 import ActivityGrid from "@/components/citizen/ActivityGrid";
 import ComplaintFeed from "@/components/citizen/ComplaintFeed";
+import SettingsView from "@/components/citizen/SettingsView";
+import ProfilePanel from "@/components/citizen/ProfilePanel";
 import { Menu, X } from "lucide-react";
 
 export default function CitizenDashboard() {
     const [currentView, setCurrentView] = useState<SidebarView>("dashboard");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const view = searchParams.get('view') as SidebarView;
+        if (view && ["dashboard", "activities", "complaints", "settings"].includes(view)) {
+            setCurrentView(view);
+        }
+    }, [searchParams]);
 
     return (
         <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-background">
@@ -22,9 +33,12 @@ export default function CitizenDashboard() {
                     </div>
                     <h2 className="text-lg font-bold tracking-tight">Astra Gov AI</h2>
                 </div>
-                <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -mr-2 min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none hover:bg-secondary rounded-full transition-colors">
-                    <Menu className="w-5 h-5 flex-shrink-0" />
-                </button>
+                <div className="flex items-center gap-3">
+                    <ProfilePanel onNavigateSettings={() => { setCurrentView("settings"); setIsMobileMenuOpen(false); }} />
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -mr-2 min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none hover:bg-secondary rounded-full transition-colors">
+                        <Menu className="w-5 h-5 flex-shrink-0" />
+                    </button>
+                </div>
             </div>
 
             {/* Mobile Sidebar Overlay */}
@@ -56,11 +70,16 @@ export default function CitizenDashboard() {
             {/* Main Content Pane */}
             <main className="flex-1 flex flex-col h-full overflow-y-auto w-full relative pb-24 md:pb-0">
 
-                {/* VIEW 1: Clean Dashboard (Hero View) */}
+                {/* Desktop Top Bar with Profile Icon */}
+                <div className="hidden md:flex items-center justify-end px-6 py-3 border-b bg-white/80 backdrop-blur-sm sticky top-0 z-20">
+                    <ProfilePanel onNavigateSettings={() => setCurrentView("settings")} />
+                </div>
+
+                {/* VIEW 1: Dashboard */}
                 {currentView === "dashboard" && (
                     <div className="flex-1 flex flex-col items-center justify-center -mt-20 px-4">
                         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-center text-foreground">
-                            How can we help you today, Aryan?
+                            How can we help you today?
                         </h1>
                         <p className="text-muted-foreground text-lg mb-8 text-center max-w-xl">
                             Describe your civic needs, business goals, or issues in plain English.
@@ -87,41 +106,9 @@ export default function CitizenDashboard() {
                     </div>
                 )}
 
-                {/* VIEW 4: Settings */}
+                {/* VIEW 4: Settings (Editable) */}
                 {currentView === "settings" && (
-                    <div className="p-8 h-full flex flex-col">
-                        <h1 className="text-3xl font-bold tracking-tight mb-6">Account Settings</h1>
-                        <div className="max-w-2xl bg-card rounded-2xl shadow-sm border p-8 space-y-6">
-                            <div className="border-b pb-4">
-                                <h2 className="text-lg font-semibold">Profile Details</h2>
-                                <p className="text-muted-foreground text-sm">Update your public information.</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium">Full Name</label>
-                                    <input disabled value="Aryan Sharma" className="w-full p-2 border rounded bg-secondary/30 text-muted-foreground cursor-not-allowed" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium">Age</label>
-                                    <input disabled value="28" className="w-full p-2 border rounded bg-secondary/30 text-muted-foreground cursor-not-allowed" />
-                                </div>
-                            </div>
-                            <div className="border-b pb-4 pt-4">
-                                <h2 className="text-lg font-semibold">Demographic Stats</h2>
-                                <p className="text-muted-foreground text-sm">Used for AI Scheme Matching</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium">Annual Income</label>
-                                    <input defaultValue="₹ 3,50,000" className="w-full p-2 border rounded focus:ring-2 focus:ring-primary outline-none transition" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium">Occupation</label>
-                                    <input defaultValue="Retail Business Owner" className="w-full p-2 border rounded focus:ring-2 focus:ring-primary outline-none transition" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <SettingsView />
                 )}
 
             </main>
